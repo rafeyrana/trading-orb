@@ -3,16 +3,6 @@ import dotenv
 from datetime import datetime, timedelta
 
 def get_last_market_day(date: datetime) -> datetime:
-    """
-    Returns the most recent date when the market was open (i.e., not a weekend).
-    
-    Parameters:
-        date (datetime): The current date.
-
-    Returns:
-        datetime: The last market day (previous Friday if today is Saturday/Sunday).
-    """
-    # If today is Saturday (5) or Sunday (6), return the previous Friday
     if date.weekday() == 5:  # Saturday
         return date - timedelta(days=1)
     elif date.weekday() == 6:  # Sunday
@@ -47,6 +37,19 @@ def get_opening_range_high_low(symbol: str, interval: str, api_key: str):
     low_price = float(first_interval['3. low'])
 
     return high_price, low_price
+
+def get_current_price(symbol: str, api_key: str) -> float:
+    url = f'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={api_key}'
+    response = requests.get(url)
+    data = response.json()
+
+    if "Global Quote" not in data:
+        raise ValueError(f"No global quote data found for symbol {symbol}")
+    
+    current_price = float(data["Global Quote"]["05. price"])
+    return current_price
+
+
 
 
 if __name__ == "__main__":
