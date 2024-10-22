@@ -1,6 +1,8 @@
 import requests
 import dotenv
+import time
 from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor
 
 def get_last_market_day(date: datetime) -> datetime:
     if date.weekday() == 5:  # Saturday
@@ -9,6 +11,7 @@ def get_last_market_day(date: datetime) -> datetime:
         return date - timedelta(days=2)
     else:
         return date
+
 
 def get_opening_range_high_low(symbol: str, interval: str, api_key: str):
 
@@ -32,18 +35,17 @@ def get_opening_range_high_low(symbol: str, interval: str, api_key: str):
 
     first_interval = time_series[first_interval_key]
 
-  
     high_price = float(first_interval['2. high'])
     low_price = float(first_interval['3. low'])
 
     return high_price, low_price
 
+
 def get_current_price(symbol: str, api_key: str) -> float:
     url = f'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={api_key}'
     response = requests.get(url)
     data = response.json()
-    print(data)
-
+    
     if "Global Quote" not in data:
         raise ValueError(f"No global quote data found for symbol {symbol}")
     
@@ -55,31 +57,42 @@ def monitor_price(symbol: str, high: float, low: float, api_key: str):
     while True:
         try:
             current_price = get_current_price(symbol, api_key)
-            print(f"Current price: {current_price}")
+            print(f"Current price for {symbol}: {current_price}")
+
             if current_price > high:
                 print(f"ENTER TRADE: Buy {symbol} at {current_price}. Breakout above high {high}.")
-                break  # Exit after entering trade
+                break 
             elif current_price < low:
                 print(f"ENTER TRADE: Sell {symbol} at {current_price}. Breakout below low {low}.")
-                break  # Exit after entering trade
+                break 
             else:
-                print("No breakout yet. Waiting...")
-
-            # Wait for 1 minute before checking the price again
-            time.sleep(60)
+                print(f"No breakout for {symbol} yet. Waiting...")
+            time.sleep(6)
 
         except Exception as e:
-            print(f"Error occurred: {e}")
+            print(f"Error occurred for {symbol}: {e}")
             break
+
+
+def monitor_multiple_stocks(symbols: list, interval: str, api_key: str):
+
+    orb_ranges = {}
+    for symbol in symbols:
+        try:
+            high, low = get_opening_range_high_low(symbol, interval, api_key)
+            orb_ranges[symbol] = (high, low)
+            print(f"Opening range for {symbol} - High: {high}, Low: {low}")
+        except Exception as e:
+            print(f"Error fetching ORB for {symbol}: {e}")
+
+    # parallel processing
+    with ThreadPoolExecutor(max_workers=len(symbols)) as executor:
+        for symbol, (high, low) in orb_ranges.items():
+            executor.submit(monitor_price, symbol, high, low, api_key)
 
 if __name__ == "__main__":
     api_key = dotenv.dotenv_values()['ALPHA_VANTAGE_API_KEY']
-    symbol = 'IBM'
-    interval = '15min'
+    symbols = ['IBM', 'AAPL', 'TSLA'] 
+    interval = '15min' 
 
-    # Step 1: Get the Opening Range (ORB) once
-    high, low = get_opening_range_high_low(symbol, interval, api_key)
-    print(f"Opening range high: {high}, low: {low}")
-
-    # Step 2: Start monitoring the price every minute
-    monitor_price(symbol, high, low, api_key)
+    monitor_multiple_stocks(symbols, interval, api_key)
