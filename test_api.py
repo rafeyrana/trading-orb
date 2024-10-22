@@ -42,6 +42,7 @@ def get_current_price(symbol: str, api_key: str) -> float:
     url = f'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={api_key}'
     response = requests.get(url)
     data = response.json()
+    print(data)
 
     if "Global Quote" not in data:
         raise ValueError(f"No global quote data found for symbol {symbol}")
@@ -50,11 +51,35 @@ def get_current_price(symbol: str, api_key: str) -> float:
     return current_price
 
 
+def monitor_price(symbol: str, high: float, low: float, api_key: str):
+    while True:
+        try:
+            current_price = get_current_price(symbol, api_key)
+            print(f"Current price: {current_price}")
+            if current_price > high:
+                print(f"ENTER TRADE: Buy {symbol} at {current_price}. Breakout above high {high}.")
+                break  # Exit after entering trade
+            elif current_price < low:
+                print(f"ENTER TRADE: Sell {symbol} at {current_price}. Breakout below low {low}.")
+                break  # Exit after entering trade
+            else:
+                print("No breakout yet. Waiting...")
 
+            # Wait for 1 minute before checking the price again
+            time.sleep(60)
+
+        except Exception as e:
+            print(f"Error occurred: {e}")
+            break
 
 if __name__ == "__main__":
     api_key = dotenv.dotenv_values()['ALPHA_VANTAGE_API_KEY']
     symbol = 'IBM'
-    interval = '15min' 
+    interval = '15min'
+
+    # Step 1: Get the Opening Range (ORB) once
     high, low = get_opening_range_high_low(symbol, interval, api_key)
     print(f"Opening range high: {high}, low: {low}")
+
+    # Step 2: Start monitoring the price every minute
+    monitor_price(symbol, high, low, api_key)
