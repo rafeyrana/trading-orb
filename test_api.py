@@ -1,13 +1,43 @@
 import requests
 import dotenv
 import time
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 from twilio.rest import Client
 
-def send_trade_alert(message: str, phone_numbers: list):
-  
+def send_email_alert(subject: str, message: str, email_addresses: list):
+    """Send email alerts to specified email addresses"""
+    env_vars = dotenv.dotenv_values()
+    smtp_server = env_vars['SMTP_SERVER']
+    smtp_port = int(env_vars['SMTP_PORT'])
+    sender_email = env_vars['SENDER_EMAIL']
+    email_password = env_vars['EMAIL_PASSWORD']
+    
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = sender_email
+        msg['Subject'] = subject
+        
+        msg.attach(MIMEText(message, 'plain'))
+        
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(sender_email, email_password)
 
+            for email in email_addresses:
+                msg['To'] = email
+                server.send_message(msg)
+                print(f"Alert email sent to {email}")
+        return True
+    except Exception as e:
+        print(f"Error sending email alert: {e}")
+        return False
+
+def send_trade_alert(message: str, phone_numbers: list):
+    """Send SMS alerts using Twilio"""
     env_vars = dotenv.dotenv_values()
     account_sid = env_vars['TWILIO_ACCOUNT_SID']
     auth_token = env_vars['TWILIO_AUTH_TOKEN']
@@ -16,7 +46,6 @@ def send_trade_alert(message: str, phone_numbers: list):
     try:
         client = Client(account_sid, auth_token)
         
-        # Send message to each phone number
         for phone_number in phone_numbers:
             message = client.messages.create(
                 body=message,
@@ -27,6 +56,17 @@ def send_trade_alert(message: str, phone_numbers: list):
         return True
     except Exception as e:
         print(f"Error sending trade alert: {e}")
+        return False
+
+def send_notification(message: str, notification_type: str, recipients: list):
+    """Send notification based on specified type (email or sms)"""
+    if notification_type.lower() == 'email':
+        subject = "Stock Trading Alert"
+        return send_email_alert(subject, message, recipients)
+    elif notification_type.lower() == 'sms':
+        return send_trade_alert(message, recipients)
+    else:
+        print(f"Invalid notification type: {notification_type}")
         return False
 
 def get_last_market_day(date: datetime) -> datetime:
@@ -72,8 +112,7 @@ def get_current_price(symbol: str, api_key: str) -> float:
     current_price = float(data["Global Quote"]["05. price"])
     return current_price
 
-def monitor_price(symbol: str, high: float, low: float, api_key: str, phone_numbers: list):
-   
+def monitor_price(symbol: str, high: float, low: float, api_key: str, notification_type: str, recipients: list):
     alert_sent = False
 
     while not alert_sent:
@@ -90,7 +129,7 @@ def monitor_price(symbol: str, high: float, low: float, api_key: str, phone_numb
                     f"Time: {datetime.now().strftime('%H:%M:%S')}"
                 )
                 print(message)
-                if send_trade_alert(message, phone_numbers):
+                if send_notification(message, notification_type, recipients):
                     alert_sent = True
                 break
                 
@@ -103,7 +142,7 @@ def monitor_price(symbol: str, high: float, low: float, api_key: str, phone_numb
                     f"Time: {datetime.now().strftime('%H:%M:%S')}"
                 )
                 print(message)
-                if send_trade_alert(message, phone_numbers):
+                if send_notification(message, notification_type, recipients):
                     alert_sent = True
                 break
                 
@@ -115,7 +154,7 @@ def monitor_price(symbol: str, high: float, low: float, api_key: str, phone_numb
             print(f"Error occurred for {symbol}: {e}")
             break
 
-def monitor_multiple_stocks(symbols: list, interval: str, api_key: str, phone_numbers: list):
+def monitor_multiple_stocks(symbols: list, interval: str, api_key: str, notification_type: str, recipients: list):
     orb_ranges = {}
     for symbol in symbols:
         try:
@@ -127,19 +166,26 @@ def monitor_multiple_stocks(symbols: list, interval: str, api_key: str, phone_nu
 
     with ThreadPoolExecutor(max_workers=len(symbols)) as executor:
         for symbol, (high, low) in orb_ranges.items():
-            executor.submit(monitor_price, symbol, high, low, api_key, phone_numbers)
+            executor.submit(monitor_price, symbol, high, low, api_key, notification_type, recipients)
 
 if __name__ == "__main__":
-
     env_vars = dotenv.dotenv_values()
     api_key = env_vars['ALPHA_VANTAGE_API_KEY']
 
-    phone_numbers = [
-        '+1234567890',  
-        '+0987654321'
-    ]
+    notification_type = 'email'  # Change this to 'sms' for text messages
+    
+    if notification_type == 'email':
+        recipients = [
+            'user1@example.com',
+            'user2@example.com'
+        ]
+    else:
+        recipients = [
+            '+1234567890',
+            '+0987654321'
+        ]
     
     symbols = ['AAPL', "MSFT", "COIN", "NVDA", "TSLA"]
     interval = '15min'
 
-    monitor_multiple_stocks(symbols, interval, api_key, phone_numbers)
+    monitor_multiple_stocks(symbols, interval, api_key, notification_type, recipients)
