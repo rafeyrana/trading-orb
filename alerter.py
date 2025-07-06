@@ -1,20 +1,23 @@
 # Module for handling alerts
 
-from abc import ABC, abstractmethod
 import logging
+from abc import ABC, abstractmethod
 from datetime import datetime
-import config
 
 # Basic logging setup (if not already configured elsewhere, e.g. main)
-# logging.basicConfig(level=config.LOG_LEVEL.upper(), format='%(asctime)s - %(levelname)s - %(message)s')
+# logging.basicConfig(
+#     level=config.LOG_LEVEL.upper(), format='%(asctime)s - %(levelname)s - %(message)s'
+# )
 logger = logging.getLogger(__name__)
+
 
 class Alerter(ABC):
     """
     Abstract base class for alerters.
     """
+
     @abstractmethod
-    def send_alert(self, subject: str, message: str, recipients: list = None):
+    def send_alert(self, subject: str, message: str, recipients: list | None = None):
         """
         Sends an alert.
 
@@ -26,29 +29,35 @@ class Alerter(ABC):
         """
         pass
 
+
 class LogAlerter(Alerter):
     """
     An alerter that logs messages to the console (or a log file if logging is configured).
     """
-    def send_alert(self, subject: str, message: str, recipients: list = None):
+
+    def send_alert(self, subject: str, message: str, recipients: list | None = None):
         """
         Logs the alert message. Recipients are ignored for this alerter.
 
         Args:
             subject (str): The subject of the alert.
             message (str): The detailed alert message.
-            recipients (list, optional): Ignored for LogAlerter.
+            recipients (list | None, optional): Ignored for LogAlerter.
         """
-        full_message = f"ALERT - Subject: {subject}\n{message}\n---"
+        full_message: str = f"ALERT - Subject: {subject}\n{message}\n---"
         # Using the root logger configured in main.py or strategy.py for now
         # If specific alerter logging is needed, configure logger here.
         logger.info(full_message)
-        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] CONSOLE ALERT: {subject}\n{message}\n")
+        timestamp: str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        console_output: str = f"[{timestamp}] CONSOLE ALERT: {subject}\n{message}\n"
+        print(console_output)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Configure basic logging for testing this module directly
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(module)s - %(message)s')
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(module)s - %(message)s"
+    )
 
     logger.info("Testing Alerter module...")
 
@@ -56,9 +65,7 @@ if __name__ == '__main__':
 
     test_subject = "TEST_SYMBOL Breakout"
     test_message = (
-        "This is a test alert message.\n"
-        "Price: $100.00\n"
-        "Condition: Crossed above ORB High."
+        "This is a test alert message.\nPrice: $100.00\nCondition: Crossed above ORB High."
     )
 
     logger.info("\nSending a test alert via LogAlerter:")
