@@ -1,0 +1,92 @@
+[project]
+name = "orb_trading_bot"
+version = "0.1.0"
+description = "A trading bot to monitor Opening Range Breakouts (ORB)."
+readme = "README.md"
+requires-python = ">=3.10" # Assuming Python 3.10+ for modern type hinting
+license = {text = "MIT"} # Or choose another license
+
+dependencies = [
+    "python-dotenv>=0.20.0", # For .env file loading
+    "requests>=2.20.0",      # For HTTP requests to APIs
+    "pytz>=2023.3",          # For timezone handling
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",         # For running unit and integration tests
+    "mypy>=1.0.0",           # For static type checking
+    "ruff>=0.1.0",           # For linting and formatting
+    "uv>=0.1.0",             # For environment and package management
+    "types-requests>=2.28.0",# Stubs for requests
+    "types-pytz>=2023.3",    # Stubs for pytz
+]
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+    ".uv",
+]
+line-length = 100 # Increased for better readability sometimes
+target-version = "py310" # Assume Python 3.10
+
+[tool.ruff.lint]
+# Enable Pyflakes, Pycodestyle, and isort rules by default.
+# For a list of all rules, see: https://docs.astral.sh/ruff/rules/
+select = ["E", "F", "W", "I"] # E=pycodestyle errors, F=pyflakes, W=pycodestyle warnings, I=isort
+ignore = []
+
+# Allow autofix for all enabled rules (when --fix)
+fixable = ["A", "B", "C", "D", "E", "F", "G", "I", "N", "Q", "S", "T", "W", "ANN", "ARG", "BLE", "COM", "DJ", "DTZ", "EM", "ERA", "EXE", "FBT", "ICN", "INP", "ISC", "NPY", "PD", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RET", "RSE", "RUF", "SIM", "SLF", "TCH", "TID", "TRY", "UP", "YTT"]
+unfixable = []
+
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true # Start with this, can be refined later
+# disallow_untyped_defs = true # Can be enabled after initial type hinting pass
+# disallow_incomplete_defs = true # Can be enabled after initial type hinting pass
+
+# Per-module settings (example, can be more granular)
+# [[tool.mypy.overrides]]
+# module = [ "*.tests.*" ]
+# allow_untyped_defs = true # If tests are initially less typed
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = [
+    "tests",
+]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
